@@ -1,6 +1,7 @@
 import os
 import asyncio
 import telegram
+from aiohttp import web # Added to keep Railway alive
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -62,7 +63,21 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-# 3. MAIN FUNCTION (100% RAILWAY PROOF)
+# 3. DUMMY WEB SERVER (TO KEEP RAILWAY ALIVE)
+async def handle_health(request):
+    return web.Response(text="Bot is running!")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get('/', handle_health)
+    port = int(os.environ.get('PORT', 8080))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    print(f"🌐 Keep-Alive server running on port {port}")
+
+# 4. MAIN ASYNC FUNCTION
 async def main():
     TOKEN = os.environ.get('TELEGRAM_TOKEN')
     
@@ -85,15 +100,15 @@ async def main():
     
     print("📡 Starting polling...")
     await application.updater.start_polling()
-    
     print("✅ Bot is now LIVE on Telegram!")
+
+    # Start the dummy web server to make Railway happy
+    await start_web_server()
     
     # KEEP THE BOT ALIVE
     try:
-        # This specific sleep pattern prevents Railway from killing the loop
         while True:
-            await asyncio.sleep(3600) # Sleep for an hour
-            await asyncio.sleep(0)    # This tiny fix prevents the "event loop is closed" error
+            await asyncio.sleep(3600) 
     except KeyboardInterrupt:
         pass
     finally:
