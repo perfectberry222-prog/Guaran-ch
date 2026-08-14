@@ -1,9 +1,17 @@
 import os
+import time
 import asyncio
 import telegram
-from aiohttp import web # Added to keep Railway alive
+from aiohttp import web
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+
+# --- CRITICAL FIX ---
+# Force the bot to pause for 5 seconds at startup.
+# This ensures any "ghost" old processes on Telegram die before we try to connect.
+print("⚠️ Waiting 5 seconds to kill ghost connections...")
+time.sleep(5)
+print("✅ Starting up now...")
 
 # 1. START COMMAND
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
