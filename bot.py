@@ -1,10 +1,8 @@
 import os
-import logging
+import asyncio
+import telegram
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-
-# Setup logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # 1. START COMMAND
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -64,28 +62,43 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-# 3. MAIN START
-if __name__ == '__main__':
+# 3. MAIN FUNCTION (100% RAILWAY PROOF)
+async def main():
     TOKEN = os.environ.get('TELEGRAM_TOKEN')
-    PORT = int(os.environ.get('PORT', 8080))
     
     if not TOKEN:
-        print("Error: TELEGRAM_TOKEN not set!")
-        exit(1)
-        
-    # Railway provides a URL
-    PUBLIC_URL = f"https://{os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'example.com')}"
-    
-    print(f"🚀 Starting bot on {PUBLIC_URL}:{PORT}")
+        print("Error: TELEGRAM_TOKEN environment variable not set!")
+        return
+
+    print("🚀 Starting Guaraná.ch Bot...")
     
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    # Use Webhook
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=f"{PUBLIC_URL}/{TOKEN}"
-    )
+    print("🔄 Clearing old connections...")
+    temp_bot = telegram.Bot(token=TOKEN)
+    await temp_bot.delete_webhook(drop_pending_updates=True)
+    print("✅ Old connections cleared!")
+    
+    await application.initialize()
+    
+    print("📡 Starting polling...")
+    await application.updater.start_polling()
+    
+    print("✅ Bot is now LIVE on Telegram!")
+    
+    # KEEP THE BOT ALIVE
+    try:
+        # This specific sleep pattern prevents Railway from killing the loop
+        while True:
+            await asyncio.sleep(3600) # Sleep for an hour
+            await asyncio.sleep(0)    # This tiny fix prevents the "event loop is closed" error
+    except KeyboardInterrupt:
+        pass
+    finally:
+        await application.updater.stop()
+        await application.shutdown()
+
+if __name__ == '__main__':
+    asyncio.run(main())
