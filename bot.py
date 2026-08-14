@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 
 # 1. START COMMAND (French first)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Language selection buttons (Français, English, Deutsch)
+    # Language selection buttons
     language_keyboard = [
         [InlineKeyboardButton("Français", callback_data='FR'), 
          InlineKeyboardButton("English", callback_data='EN'), 
@@ -14,10 +14,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Send the Guaraná.ch logo image first
     try:
-        # 'logo.png' must be in the same GitHub folder as this code
         await update.message.reply_photo(photo=open('logo.png', 'rb'))
     except Exception as e:
-        print(f"Image error: {e}") # Railway logs will show this if it fails
+        print(f"Image error: {e}")
 
     # Send the French text with the language buttons
     await update.message.reply_text(
@@ -25,38 +24,38 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-# 2. HANDLE BUTTON CLICKS (Language selection and menus)
+# 2. HANDLE BUTTON CLICKS
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
     # If user selects ENGLISH
     if query.data == 'EN':
-        # English Main Menu buttons
+        # The 2 big buttons you want (Open shop & Contact us)
         main_menu_keyboard = [
-            [InlineKeyboardButton("🛍️ Open shop", url="PUT_YOUR_SHOP_LINK_HERE")], # CHANGE THIS LATER
+            [InlineKeyboardButton("🛍️ Open shop", url="PUT_YOUR_SHOP_LINK_HERE")], 
             [InlineKeyboardButton("📞 Contact us", url="https://t.me/FavelaTerpsPackz")]
         ]
         reply_markup = InlineKeyboardMarkup(main_menu_keyboard)
         
-        # Send the English welcome text with the buttons
-        await query.edit_message_text(
+        # --- CHANGED HERE ---
+        # Instead of editing the old message, we send a NEW message below it
+        await query.message.reply_text(
             text="🤗 Welcome to Guaraná.ch!\nThanks for your trust – order quickly via the shop 👇",
             reply_markup=reply_markup
         )
+        # --------------------
         
     # If user selects FRENCH
     elif query.data == 'FR':
-        # (You can add a French main menu here later if you want)
         await query.edit_message_text(text="Merci d'avoir choisi le Français!")
 
-    # If user selects GERMAN
+    # If user selects GERMAN (Like your 3rd screenshot)
     elif query.data == 'DE':
         await query.edit_message_text(text="Danke, dass du Deutsch gewählt hast!")
 
 # 3. START THE BOT
 if __name__ == '__main__':
-    # Railway automatically injects this environment variable
     TOKEN = os.environ.get('TELEGRAM_TOKEN')
     
     if not TOKEN:
