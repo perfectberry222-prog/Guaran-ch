@@ -1,4 +1,5 @@
 import os
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -15,7 +16,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await update.message.reply_photo(photo=open('logo.png', 'rb'))
     except Exception:
-        pass # Don't crash if image isn't there
+        pass # Skip error if image isn't found
 
     # Send French welcome
     await update.message.reply_text(
@@ -28,8 +29,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer() 
 
-    # --- IMPORTANT FIX HERE ---
-    # Added "https://" before the shop link, and a real placeholder website.
+    # The 2 buttons
     main_menu_keyboard = [
         [InlineKeyboardButton("🛍️ Open shop", url="https://example.com")], 
         [InlineKeyboardButton("📞 Contact us", url="https://t.me/FavelaTerpsPackz")]
@@ -69,18 +69,27 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-# 3. START THE BOT
+# 3. START THE BOT (Fixed for Railway)
 if __name__ == '__main__':
     TOKEN = os.environ.get('TELEGRAM_TOKEN')
+    PORT = int(os.environ.get('PORT', 8080)) # Railway requires a PORT variable
     
     if not TOKEN:
         print("Error: TELEGRAM_TOKEN environment variable not set!")
         exit(1)
         
+    print("Building application...")
     application = ApplicationBuilder().token(TOKEN).build()
     
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    print("Bot is running and waiting for users...")
-    application.run_polling()
+    # --- IMPORTANT RAILWAY FIX ---
+    # Start the bot using Webhooks instead of Polling (Stops the Conflict error)
+    print(f"Starting webhook on port {PORT}...")
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=f"https://{os.environ.get('RAILWAY_STATIC_URL')}/{TOKEN}"
+    )
