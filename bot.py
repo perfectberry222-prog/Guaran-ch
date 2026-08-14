@@ -29,30 +29,36 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
+    # --- THE 2 BUTTON MENU FOR EVERY LANGUAGE ---
+    main_menu_keyboard = [
+        [InlineKeyboardButton("🛍️ Open shop", url="PUT_YOUR_SHOP_LINK_HERE")], 
+        [InlineKeyboardButton("📞 Contact us", url="https://t.me/FavelaTerpsPackz")]
+    ]
+    reply_markup = InlineKeyboardMarkup(main_menu_keyboard)
+    
     # If user selects ENGLISH
     if query.data == 'EN':
-        # The 2 big buttons you want (Open shop & Contact us)
-        main_menu_keyboard = [
-            [InlineKeyboardButton("🛍️ Open shop", url="PUT_YOUR_SHOP_LINK_HERE")], 
-            [InlineKeyboardButton("📞 Contact us", url="https://t.me/FavelaTerpsPackz")]
-        ]
-        reply_markup = InlineKeyboardMarkup(main_menu_keyboard)
-        
-        # --- CHANGED HERE ---
-        # Instead of editing the old message, we send a NEW message below it
+        # Send a NEW message with the English text + 2 buttons
         await query.message.reply_text(
             text="🤗 Welcome to Guaraná.ch!\nThanks for your trust – order quickly via the shop 👇",
             reply_markup=reply_markup
         )
-        # --------------------
         
     # If user selects FRENCH
     elif query.data == 'FR':
-        await query.edit_message_text(text="Merci d'avoir choisi le Français!")
+        # Send a NEW message with the French text + 2 buttons
+        await query.message.reply_text(
+            text="🤗 Bienvenue sur Guaraná.ch!\nMerci de votre confiance – commandez rapidement via la boutique 👇",
+            reply_markup=reply_markup
+        )
 
-    # If user selects GERMAN (Like your 3rd screenshot)
+    # If user selects GERMAN
     elif query.data == 'DE':
-        await query.edit_message_text(text="Danke, dass du Deutsch gewählt hast!")
+        # Send a NEW message with the German text + 2 buttons
+        await query.message.reply_text(
+            text="🤗 Willkommen bei Guaraná.ch!\nDanke für dein Vertrauen – bestelle schnell über den Shop 👇",
+            reply_markup=reply_markup
+        )
 
 # 3. START THE BOT
 if __name__ == '__main__':
