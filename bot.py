@@ -73,7 +73,7 @@ if __name__ == '__main__':
         print("Error: TELEGRAM_TOKEN not set!")
         exit(1)
         
-    # Railway provides a URL like https://your-app.up.railway.app
+    # Railway provides a URL
     PUBLIC_URL = f"https://{os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'example.com')}"
     
     print(f"🚀 Starting bot on {PUBLIC_URL}:{PORT}")
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    # Use Webhook (100% crash-proof on Railway)
+    # Use Webhook
     application.run_webhook(
         listen="0.0.0.0",
         port=PORT,
