@@ -1,5 +1,6 @@
 import os
 import asyncio
+import telegram
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -69,36 +70,50 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-# 3. START THE BOT (FIXED FOR RAILWAY)
-if __name__ == '__main__':
+# 3. MAIN ASYNC FUNCTION (Railway Safe)
+async def main():
     TOKEN = os.environ.get('TELEGRAM_TOKEN')
     
     if not TOKEN:
         print("Error: TELEGRAM_TOKEN environment variable not set!")
-        exit(1)
-        
+        return
+
     print("🚀 Starting Guaraná.ch Bot...")
+    
+    # Build the application
     application = ApplicationBuilder().token(TOKEN).build()
     
+    # Add handlers
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    # --- THE MAGIC FIX ---
-    print("🔄 Forcing Telegram to clear any old zombie connections...")
-    
-    # Create a temporary bot instance to force-delete any existing webhooks
-    import telegram
+    # Kill any existing webhooks/polling sessions
+    print("🔄 Clearing old connections...")
     temp_bot = telegram.Bot(token=TOKEN)
+    await temp_bot.delete_webhook(drop_pending_updates=True)
+    print("✅ Old connections cleared!")
     
-    # Run this as a synchronous task before starting the main bot
-    import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(temp_bot.delete_webhook(drop_pending_updates=True))
-    loop.close()
+    # Initialize the application
+    await application.initialize()
     
-    print("✅ Old connections cleared! Starting polling...")
-    print("Bot is running and waiting for users...")
+    # Start polling manually
+    print("📡 Starting polling...")
+    await application.updater.start_polling()
+    print("✅ Bot is running and waiting for users...")
     
-    # Now start the bot safely
-    application.run_polling()
+    # Keep the bot running forever
+    try:
+        # This keeps the event loop alive
+        while True:
+            await asyncio.sleep(3600) # Sleep for 1 hour, repeat
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Clean shutdown
+        await application.updater.stop()
+        await application.shutdown()
+
+# 4. EXECUTING THE BOT
+if __name__ == '__main__':
+    # Run using asyncio instead of application.run_polling()
+    asyncio.run(main())
