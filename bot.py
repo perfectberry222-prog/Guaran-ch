@@ -1,9 +1,10 @@
 import os
-import asyncio
-import telegram
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from aiohttp import web # Added to keep Railway alive
+
+# Setup logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # 1. START COMMAND
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -63,57 +64,28 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-# 3. DUMMY WEB SERVER TO KEEP RAILWAY ALIVE
-async def handle_health(request):
-    return web.Response(text="Bot is alive!")
-
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get('/', handle_health)
-    port = int(os.environ.get('PORT', 8080))
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    print(f"🌐 Health server running on port {port} (Keeps Railway happy)")
-
-# 4. MAIN ASYNC FUNCTION
-async def main():
+# 3. MAIN START
+if __name__ == '__main__':
     TOKEN = os.environ.get('TELEGRAM_TOKEN')
+    PORT = int(os.environ.get('PORT', 8080))
     
     if not TOKEN:
-        print("Error: TELEGRAM_TOKEN environment variable not set!")
-        return
-
-    print("🚀 Starting Guaraná.ch Bot...")
+        print("Error: TELEGRAM_TOKEN not set!")
+        exit(1)
+        
+    # Railway provides a URL like https://your-app.up.railway.app
+    PUBLIC_URL = f"https://{os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'example.com')}"
+    
+    print(f"🚀 Starting bot on {PUBLIC_URL}:{PORT}")
     
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    print("🔄 Clearing old connections...")
-    temp_bot = telegram.Bot(token=TOKEN)
-    await temp_bot.delete_webhook(drop_pending_updates=True)
-    print("✅ Old connections cleared!")
-    
-    await application.initialize()
-    
-    print("📡 Starting polling...")
-    await application.updater.start_polling()
-    print("✅ Bot is now LIVE on Telegram!")
-    
-    # Start the dummy web server so Railway doesn't kill us
-    await start_web_server()
-    
-    # Keep the bot running forever
-    try:
-        while True:
-            await asyncio.sleep(3600)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        await application.updater.stop()
-        await application.shutdown()
-
-if __name__ == '__main__':
-    asyncio.run(main())
+    # Use Webhook (100% crash-proof on Railway)
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=f"{PUBLIC_URL}/{TOKEN}"
+    )
