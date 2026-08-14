@@ -2,7 +2,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# 1. START COMMAND (French first)
+# 1. START COMMAND
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     language_keyboard = [
         [InlineKeyboardButton("Français", callback_data='FR'), 
@@ -14,36 +14,34 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Send logo
     try:
         await update.message.reply_photo(photo=open('logo.png', 'rb'))
-    except Exception as e:
-        print(f"Image error: {e}")
+    except Exception:
+        pass # Don't crash if image isn't there
 
-    # Send French text
+    # Send French welcome
     await update.message.reply_text(
         "👋 Bienvenue sur Guaraná.ch\nChoisis ta langue pour accéder au catalogue :",
         reply_markup=reply_markup
     )
 
-# 2. HANDLE LANGUAGE BUTTON CLICKS
+# 2. HANDLE BUTTON CLICKS
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer() # Important: This clears the "loading" state on the button
+    await query.answer() 
 
-    # The 2 buttons we want to show after picking a language
+    # --- IMPORTANT FIX HERE ---
+    # Added "https://" before the shop link, and a real placeholder website.
     main_menu_keyboard = [
-        [InlineKeyboardButton("🛍️ Open shop", url="PUT_YOUR_SHOP_LINK_HERE")], 
+        [InlineKeyboardButton("🛍️ Open shop", url="https://example.com")], 
         [InlineKeyboardButton("📞 Contact us", url="https://t.me/FavelaTerpsPackz")]
     ]
     reply_markup = InlineKeyboardMarkup(main_menu_keyboard)
 
     # --- ENGLISH ---
     if query.data == 'EN':
-        # Send the LOGO again (to match your screenshot exactly)
         try:
             await query.message.reply_photo(photo=open('logo.png', 'rb'))
-        except Exception as e:
-            print(f"Image error: {e}")
-
-        # Send the ENGLISH MENU as a NEW message
+        except Exception:
+            pass
         await query.message.reply_text(
             text="🤗 Welcome to Guaraná.ch!\nThanks for your trust – order quickly via the shop 👇",
             reply_markup=reply_markup
@@ -51,13 +49,10 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # --- FRENCH ---
     elif query.data == 'FR':
-        # Send the LOGO again
         try:
             await query.message.reply_photo(photo=open('logo.png', 'rb'))
-        except Exception as e:
-            print(f"Image error: {e}")
-
-        # Send the FRENCH MENU as a NEW message
+        except Exception:
+            pass
         await query.message.reply_text(
             text="🤗 Bienvenue sur Guaraná.ch!\nMerci de votre confiance – commandez rapidement via la boutique 👇",
             reply_markup=reply_markup
@@ -65,13 +60,10 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # --- GERMAN ---
     elif query.data == 'DE':
-        # Send the LOGO again
         try:
             await query.message.reply_photo(photo=open('logo.png', 'rb'))
-        except Exception as e:
-            print(f"Image error: {e}")
-
-        # Send the GERMAN MENU as a NEW message
+        except Exception:
+            pass
         await query.message.reply_text(
             text="🤗 Willkommen bei Guaraná.ch!\nDanke für dein Vertrauen – bestelle schnell über den Shop 👇",
             reply_markup=reply_markup
