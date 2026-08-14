@@ -69,27 +69,36 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-# 3. START THE BOT (Fixed for Railway)
+# 3. START THE BOT (FIXED FOR RAILWAY)
 if __name__ == '__main__':
     TOKEN = os.environ.get('TELEGRAM_TOKEN')
-    PORT = int(os.environ.get('PORT', 8080)) # Railway requires a PORT variable
     
     if not TOKEN:
         print("Error: TELEGRAM_TOKEN environment variable not set!")
         exit(1)
         
-    print("Building application...")
+    print("🚀 Starting Guaraná.ch Bot...")
     application = ApplicationBuilder().token(TOKEN).build()
     
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    # --- IMPORTANT RAILWAY FIX ---
-    # Start the bot using Webhooks instead of Polling (Stops the Conflict error)
-    print(f"Starting webhook on port {PORT}...")
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=f"https://{os.environ.get('RAILWAY_STATIC_URL')}/{TOKEN}"
-    )
+    # --- THE MAGIC FIX ---
+    print("🔄 Forcing Telegram to clear any old zombie connections...")
+    
+    # Create a temporary bot instance to force-delete any existing webhooks
+    import telegram
+    temp_bot = telegram.Bot(token=TOKEN)
+    
+    # Run this as a synchronous task before starting the main bot
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(temp_bot.delete_webhook(drop_pending_updates=True))
+    loop.close()
+    
+    print("✅ Old connections cleared! Starting polling...")
+    print("Bot is running and waiting for users...")
+    
+    # Now start the bot safely
+    application.run_polling()
