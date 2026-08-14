@@ -3,6 +3,7 @@ import asyncio
 import telegram
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from aiohttp import web # Added to keep Railway alive
 
 # 1. START COMMAND
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -13,13 +14,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(language_keyboard)
     
-    # Send logo
     try:
         await update.message.reply_photo(photo=open('logo.png', 'rb'))
     except Exception:
-        pass # Skip error if image isn't found
+        pass
 
-    # Send French welcome
     await update.message.reply_text(
         "👋 Bienvenue sur Guaraná.ch\nChoisis ta langue pour accéder au catalogue :",
         reply_markup=reply_markup
@@ -30,14 +29,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer() 
 
-    # The 2 buttons
     main_menu_keyboard = [
         [InlineKeyboardButton("🛍️ Open shop", url="https://example.com")], 
         [InlineKeyboardButton("📞 Contact us", url="https://t.me/FavelaTerpsPackz")]
     ]
     reply_markup = InlineKeyboardMarkup(main_menu_keyboard)
 
-    # --- ENGLISH ---
     if query.data == 'EN':
         try:
             await query.message.reply_photo(photo=open('logo.png', 'rb'))
@@ -47,8 +44,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="🤗 Welcome to Guaraná.ch!\nThanks for your trust – order quickly via the shop 👇",
             reply_markup=reply_markup
         )
-
-    # --- FRENCH ---
     elif query.data == 'FR':
         try:
             await query.message.reply_photo(photo=open('logo.png', 'rb'))
@@ -58,8 +53,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="🤗 Bienvenue sur Guaraná.ch!\nMerci de votre confiance – commandez rapidement via la boutique 👇",
             reply_markup=reply_markup
         )
-
-    # --- GERMAN ---
     elif query.data == 'DE':
         try:
             await query.message.reply_photo(photo=open('logo.png', 'rb'))
@@ -70,7 +63,21 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-# 3. MAIN ASYNC FUNCTION (Railway Safe)
+# 3. DUMMY WEB SERVER TO KEEP RAILWAY ALIVE
+async def handle_health(request):
+    return web.Response(text="Bot is alive!")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get('/', handle_health)
+    port = int(os.environ.get('PORT', 8080))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    print(f"🌐 Health server running on port {port} (Keeps Railway happy)")
+
+# 4. MAIN ASYNC FUNCTION
 async def main():
     TOKEN = os.environ.get('TELEGRAM_TOKEN')
     
@@ -80,40 +87,33 @@ async def main():
 
     print("🚀 Starting Guaraná.ch Bot...")
     
-    # Build the application
     application = ApplicationBuilder().token(TOKEN).build()
-    
-    # Add handlers
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_click))
     
-    # Kill any existing webhooks/polling sessions
     print("🔄 Clearing old connections...")
     temp_bot = telegram.Bot(token=TOKEN)
     await temp_bot.delete_webhook(drop_pending_updates=True)
     print("✅ Old connections cleared!")
     
-    # Initialize the application
     await application.initialize()
     
-    # Start polling manually
     print("📡 Starting polling...")
     await application.updater.start_polling()
-    print("✅ Bot is running and waiting for users...")
+    print("✅ Bot is now LIVE on Telegram!")
+    
+    # Start the dummy web server so Railway doesn't kill us
+    await start_web_server()
     
     # Keep the bot running forever
     try:
-        # This keeps the event loop alive
         while True:
-            await asyncio.sleep(3600) # Sleep for 1 hour, repeat
+            await asyncio.sleep(3600)
     except KeyboardInterrupt:
         pass
     finally:
-        # Clean shutdown
         await application.updater.stop()
         await application.shutdown()
 
-# 4. EXECUTING THE BOT
 if __name__ == '__main__':
-    # Run using asyncio instead of application.run_polling()
     asyncio.run(main())
